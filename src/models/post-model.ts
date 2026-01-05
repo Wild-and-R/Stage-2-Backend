@@ -1,10 +1,12 @@
-export interface Post {
+export interface Product {
     id: number;
-    title: string;
+    productid: number;
+    productname: string;
     content: string;
+    price: number;
 }
 
-export const posts: Post[] = [
-    { id: 1, title: 'Post Pertama', content: 'Ini konten untuk post pertama.' },
-    { id: 2, title: 'Post Kedua', content: 'Ini konten untuk post kedua.' },
+export const products: Product[] = [
+    { id: 1, productid: 101, productname: 'Product Pertama', content: 'Ini konten untuk product pertama.', price: 10000 },
+    { id: 2, productid: 102, productname: 'Product Kedua', content: 'Ini konten untuk product kedua.', price: 20000 },
 ];
