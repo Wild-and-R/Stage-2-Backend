@@ -20,13 +20,13 @@ export const createProducts = (req: Request, res: Response) => {
 
 export const updateProduct = (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const { productname, content, price } = req.body;
+    const { productid, productname, content, price } = req.body;
 
     const product = products.find(p => p.id === id);
     if (product === undefined) {
         return res.status(404).json({ message: "Product not found" });
     }
-    product.productname = productname ?? product.productname;
+    product.productid = productid ?? product.productid;
     product.content = content ?? product.content;
     product.price = price ?? product.price;
 
