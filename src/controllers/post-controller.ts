@@ -6,10 +6,10 @@ export const getProducts = (req: Request, res: Response) => {
 };
 
 export const createProducts = (req: Request, res: Response) => {
-    const {productname, content, price} = req.body;
+    const {productid, productname, content, price} = req.body;
     const newProduct: Product = {
         id: products.length + 1,
-        productid: Math.floor(100 + Math.random() * 900),
+        productid,
         productname,
         content,
         price
