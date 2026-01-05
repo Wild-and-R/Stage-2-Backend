@@ -1,38 +1,41 @@
 import { Request, Response } from "express";
-import {posts, Post} from "../models/post-model";
+import {products, Product} from "../models/post-model";
 
-export const getPosts = (req: Request, res: Response) => {
-    res.json(posts);
+export const getProducts = (req: Request, res: Response) => {
+    res.json(products);
 };
 
-export const createPosts = (req: Request, res: Response) => {
-    const {title, content} = req.body;
-    const newPost: Post = {
-        id: posts.length + 1,
-        title,
-        content
+export const createProducts = (req: Request, res: Response) => {
+    const {productname, content, price} = req.body;
+    const newProduct: Product = {
+        id: products.length + 1,
+        productid: Math.floor(100 + Math.random() * 900),
+        productname,
+        content,
+        price
     };
-    posts.push(newPost);
-    res.status(201).json(newPost);
+    products.push(newProduct);
+    res.status(201).json(newProduct);
 };
 
-export const updatePost = (req: Request, res: Response) => {
+export const updateProduct = (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const { title, content } = req.body;
+    const { productname, content, price } = req.body;
 
-    const post = posts.find(p => p.id === id);
-    if (post === undefined) {
-        return res.status(404).json({ message: "Post not found" });
+    const product = products.find(p => p.id === id);
+    if (product === undefined) {
+        return res.status(404).json({ message: "Product not found" });
     }
-    post.title = title ?? post.title;
-    post.content = content ?? post.content;
+    product.productname = productname ?? product.productname;
+    product.content = content ?? product.content;
+    product.price = price ?? product.price;
 
-    res.json(post);
+    res.json(product);
 };
 
-export const deletePost = (req: Request, res: Response) => {
+export const deleteProduct = (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const index = posts.findIndex(p => p.id === id);
-    const deletedPost = posts.splice(index, 1);
-    res.json({ message: "Post deleted", post: deletedPost[0] });
+    const index = products.findIndex(p => p.id === id);
+    const deletedProduct = products.splice(index, 1);
+    res.json({ message: "Product deleted", product: deletedProduct[0] });
 };
