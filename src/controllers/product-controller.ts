@@ -1,13 +1,44 @@
 import { Request, Response } from "express";
 import { prisma } from "../connection/client";
 
-// GET all products
+// GET all products with filtering, sorting, pagination
 export const getProducts = async (req: Request, res: Response) => {
   try {
-    const products = await prisma.product.findMany();
+    const {
+      minPrice,
+      maxPrice,
+      minStock,
+      maxStock,
+      sortBy = "price", // price | stock
+      order = "asc",    // asc | desc
+      limit = "10",
+      offset = "0",
+    } = req.query;
+
+    const products = await prisma.product.findMany({
+      where: {
+        price: {
+          gte: minPrice ? Number(minPrice) : undefined,
+          lte: maxPrice ? Number(maxPrice) : undefined,
+        },
+        stock: {
+          gte: minStock ? Number(minStock) : undefined,
+          lte: maxStock ? Number(maxStock) : undefined,
+        },
+      },
+      orderBy: {
+        [sortBy as string]: order,
+      },
+      take: Number(limit),
+      skip: Number(offset),
+    });
 
     res.status(200).json({
-      message: "List of all products",
+      message: "List of products",
+      pagination: {
+        limit: Number(limit),
+        offset: Number(offset),
+      },
       data: products,
     });
   } catch (error) {
@@ -18,7 +49,7 @@ export const getProducts = async (req: Request, res: Response) => {
   }
 };
 
-//GET product by ID
+// GET product by ID
 export const getProduct = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -28,9 +59,7 @@ export const getProduct = async (req: Request, res: Response) => {
     });
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
+      return res.status(404).json({ message: "Product not found" });
     }
 
     res.status(200).json({
@@ -45,18 +74,17 @@ export const getProduct = async (req: Request, res: Response) => {
   }
 };
 
-
 // CREATE product
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const { productid, productname, content, price } = req.body;
+    const { name, description, price, stock } = req.body;
 
     const newProduct = await prisma.product.create({
       data: {
-        productid,
-        productname,
-        content,
+        name,
+        description,
         price,
+        stock,
       },
     });
 
@@ -72,19 +100,19 @@ export const createProduct = async (req: Request, res: Response) => {
   }
 };
 
-// UPDATE product by ID
+// UPDATE product
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { productid, productname, content, price } = req.body;
+    const { name, description, price, stock } = req.body;
 
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        productid,
-        productname,
-        content,
+        name,
+        description,
         price,
+        stock,
       },
     });
 
@@ -100,7 +128,7 @@ export const updateProduct = async (req: Request, res: Response) => {
   }
 };
 
-// DELETE product by ID
+// DELETE product
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -120,3 +148,4 @@ export const deleteProduct = async (req: Request, res: Response) => {
     });
   }
 };
+
