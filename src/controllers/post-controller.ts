@@ -1,100 +1,76 @@
 import { Request, Response } from "express";
 import { prisma } from "../connection/client";
 
-// GET all posts
-export const getPosts = async (_req: Request, res: Response) => {
+// GET /posts?userId=
+export const getPosts = async (req: Request, res: Response) => {
   try {
+    const userId = req.query.userId ? Number(req.query.userId) : undefined;
+
     const posts = await prisma.post.findMany({
-      include: { user: true },
+      where: userId ? { userId } : {},
+      include: { user: true, comments: { include: { user: true } } },
+      orderBy: { id: "asc" },
     });
 
-    res.json({
-      message: "List of all posts",
-      data: posts,
-    });
+    res.json({ message: "Posts fetched successfully", data: posts });
   } catch (error) {
     res.status(500).json({ message: "Error fetching posts", error });
   }
 };
 
-// GET post by ID
+// GET /posts/:id
 export const getPost = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
 
     const post = await prisma.post.findUnique({
       where: { id },
-      include: { user: true },
+      include: { user: true, comments: { include: { user: true } } },
     });
 
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-    res.json({
-      message: "Post fetched successfully",
-      data: post,
-    });
+    res.json({ message: "Post fetched successfully", data: post });
   } catch (error) {
     res.status(500).json({ message: "Error fetching post", error });
   }
 };
 
-// CREATE post
+// POST /posts
 export const createPost = async (req: Request, res: Response) => {
   try {
     const { title, content, userId } = req.body;
 
-    const post = await prisma.post.create({
-      data: {
-        title,
-        content,
-        userId,
-      },
-    });
+    const post = await prisma.post.create({ data: { title, content, userId } });
 
-    res.status(201).json({
-      message: "Post created successfully",
-      data: post,
-    });
+    res.status(201).json({ message: "Post created successfully", data: post });
   } catch (error) {
     res.status(500).json({ message: "Error creating post", error });
   }
 };
 
-// UPDATE post
+// PUT /posts/:id
 export const updatePost = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const { title, content } = req.body;
 
-    const post = await prisma.post.update({
-      where: { id },
-      data: { title, content },
-    });
+    const post = await prisma.post.update({ where: { id }, data: { title, content } });
 
-    res.json({
-      message: "Post updated successfully",
-      data: post,
-    });
+    res.json({ message: "Post updated successfully", data: post });
   } catch (error) {
     res.status(404).json({ message: "Post not found", error });
   }
 };
 
-// DELETE post
+// DELETE /posts/:id
 export const deletePost = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
 
-    const post = await prisma.post.delete({
-      where: { id },
-    });
+    const post = await prisma.post.delete({ where: { id } });
 
-    res.json({
-      message: "Post deleted successfully",
-      data: post,
-    });
+    res.json({ message: "Post deleted successfully", data: post });
   } catch (error) {
     res.status(404).json({ message: "Post not found", error });
   }

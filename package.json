@@ -10,6 +10,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev src/app.ts"
   },
+   "prisma": {
+    "seed": "ts-node src/connection/seed.ts"
+  },
   "keywords": [],
   "dependencies": {
     "@prisma/client": "^6.19.1",
