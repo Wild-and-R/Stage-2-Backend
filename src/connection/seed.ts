@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -8,12 +9,17 @@ async function main() {
   await prisma.post.deleteMany();
   await prisma.user.deleteMany();
 
+  // Hash passwords
+  const tachyonPassword = await bcrypt.hash("lightspeed", 10);
+  const fireflyPassword = await bcrypt.hash("lifebegetsdeath", 10);
+  const cafePassword = await bcrypt.hash("peakshadow", 10);
+
   // Create users
   const tachyon = await prisma.user.create({
     data: {
       name: "Tachyon",
       email: "tachyon@gmail.com",
-      password: "lightspeed",
+      password: tachyonPassword,
       role: "admin",
     },
   });
@@ -22,7 +28,7 @@ async function main() {
     data: {
       name: "Firefly",
       email: "ff@gmail.com",
-      password: "lifebegetsdeath",
+      password: fireflyPassword,
       role: "user",
     },
   });
@@ -31,7 +37,7 @@ async function main() {
     data: {
       name: "Cafe",
       email: "nodecaf@gmail.com",
-      password: "peakshadow",
+      password: cafePassword,
       role: "user",
     },
   });
@@ -96,13 +102,13 @@ async function main() {
 
   // Admin-only post
   await prisma.post.create({
-  data: {
-    title: "The Search for the Cure",
-    content: "No progress at all so far. Seems like I have to resort to...",
-    userId: tachyon.id,
-    isAdminOnly: true,
-  },
-});
+    data: {
+      title: "The Search for the Cure",
+      content: "No progress at all so far. Seems like I have to resort to...",
+      userId: tachyon.id,
+      isAdminOnly: true,
+    },
+  });
 
   console.log("Database seeded successfully!");
 }
