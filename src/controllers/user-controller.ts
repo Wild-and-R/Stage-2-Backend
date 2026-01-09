@@ -1,97 +1,50 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { prisma } from "../connection/client";
+import AppError from "../utils/app-error";
 
 // GET all users
-export const getUsers = async (_req: Request, res: Response) => {
+export const getUsers = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const users = await prisma.user.findMany({
-      include: { posts: true },
-    });
-
-    res.json({
-      message: "List of all users",
-      data: users,
-    });
+    const users = await prisma.user.findMany({ include: { posts: true } });
+    res.json({ message: "List of all users", data: users });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching users", error });
+    next(new AppError("Error fetching users", 500));
   }
 };
 
 // GET user by ID
-export const getUser = async (req: Request, res: Response) => {
+export const getUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id }, include: { posts: true } });
 
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: { posts: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json({
-      message: "User fetched successfully",
-      data: user,
-    });
+    if (!user) return next(new AppError("User not found", 404));
+    res.json({ message: "User fetched successfully", data: user });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching user", error });
+    next(new AppError("Error fetching user", 500));
   }
 };
 
-// CREATE user
-export const createUser = async (req: Request, res: Response) => {
+// UPDATE user (Admin only)
+export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email } = req.body;
+    const id = Number(req.params.id);
+    const { name, email, role } = req.body; // updated
 
-    const user = await prisma.user.create({
-      data: { name, email },
-    });
-
-    res.status(201).json({
-      message: "User created successfully",
-      data: user,
-    });
+    const user = await prisma.user.update({ where: { id }, data: { name, email, role } }); // updated
+    res.json({ message: "User updated successfully", data: user });
   } catch (error) {
-    res.status(500).json({ message: "Error creating user", error });
+    next(new AppError("User not found", 404));
   }
 };
 
-// UPDATE user
-export const updateUser = async (req: Request, res: Response) => {
+// DELETE user (Admin only)
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
-    const { name, email } = req.body;
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: { name, email },
-    });
-
-    res.json({
-      message: "User updated successfully",
-      data: user,
-    });
+    const user = await prisma.user.delete({ where: { id } });
+    res.json({ message: "User deleted successfully", data: user });
   } catch (error) {
-    res.status(404).json({ message: "User not found", error });
-  }
-};
-
-// DELETE user
-export const deleteUser = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-
-    const user = await prisma.user.delete({
-      where: { id },
-    });
-
-    res.json({
-      message: "User deleted successfully",
-      data: user,
-    });
-  } catch (error) {
-    res.status(404).json({ message: "User not found", error });
+    next(new AppError("User not found", 404));
   }
 };

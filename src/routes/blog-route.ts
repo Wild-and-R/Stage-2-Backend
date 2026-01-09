@@ -1,22 +1,44 @@
-import express from 'express'
-import {getPosts, getPost, createPost, updatePost, deletePost } from "../controllers/post-controller";
-import { getUsers, getUser, createUser, updateUser, deleteUser } from "../controllers/user-controller";
-import { getPostComments, getCommentsSummary } from "../controllers/comment-controller";
+import express from "express";
+import {getPosts, getPost, createPost, updatePost, deletePost} from "../controllers/post-controller";
+import {getUsers, getUser, updateUser, deleteUser} from "../controllers/user-controller";
+import {getPostComments, getCommentsSummary} from "../controllers/comment-controller";
+import { registerUser, loginUser } from "../controllers/auth";
+import { authenticate } from "../middlewares/auth";
+import { authorizeAdmin } from "../middlewares/authorize-admin";
 
 const router = express.Router();
 
-router.get('/posts', getPosts);
-router.get('/posts/:id', getPost);
-router.post('/posts', createPost);
-router.put("/posts/:id", updatePost);
-router.delete("/posts/:id", deletePost);
+//Posts Routes
+// Public: view all posts or single post
+router.get("/posts", getPosts);
+router.get("/posts/:id", getPost);
 
-router.get("/posts/:id/comments", getPostComments); // paginated
-router.get("/comments", getCommentsSummary); 
+// Authenticated: create/update posts
+router.post("/posts", authenticate, createPost);
+router.put("/posts/:id", authenticate, updatePost);
 
-router.post("/users", createUser);
+// Admin-only: delete post
+router.delete("/posts/:id", authenticate, authorizeAdmin, deletePost);
+
+// Comments Routes
+
+// Public: view comments
+router.get("/posts/:id/comments", getPostComments);
+router.get("/comments", getCommentsSummary);
+
+// Users Routes
+
+// Public: viewing users
 router.get("/users", getUsers);
 router.get("/users/:id", getUser);
-router.put("/users/:id", updateUser);
-router.delete("/users/:id", deleteUser);
+
+// Admin-only: update or delete users
+router.put("/users/:id", authenticate, authorizeAdmin, updateUser);
+router.delete("/users/:id", authenticate, authorizeAdmin, deleteUser);
+
+// Auth Routes
+
+router.post("/register", registerUser); // public
+router.post("/login", loginUser);       // public
+
 export default router;

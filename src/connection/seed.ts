@@ -10,15 +10,30 @@ async function main() {
 
   // Create users
   const tachyon = await prisma.user.create({
-    data: { name: "Tachyon", email: "tachyon@gmail.com" },
+    data: {
+      name: "Tachyon",
+      email: "tachyon@gmail.com",
+      password: "lightspeed",
+      role: "admin",
+    },
   });
 
   const firefly = await prisma.user.create({
-    data: { name: "Firefly", email: "ff@gmail.com" },
+    data: {
+      name: "Firefly",
+      email: "ff@gmail.com",
+      password: "lifebegetsdeath",
+      role: "user",
+    },
   });
 
   const cafe = await prisma.user.create({
-    data: { name: "Cafe", email: "nodecaf@gmail.com" },
+    data: {
+      name: "Cafe",
+      email: "nodecaf@gmail.com",
+      password: "peakshadow",
+      role: "user",
+    },
   });
 
   // Seed posts with comments
@@ -78,6 +93,16 @@ async function main() {
       },
     },
   });
+
+  // Admin-only post
+  await prisma.post.create({
+  data: {
+    title: "The Search for the Cure",
+    content: "No progress at all so far. Seems like I have to resort to...",
+    userId: tachyon.id,
+    isAdminOnly: true,
+  },
+});
 
   console.log("Database seeded successfully!");
 }
