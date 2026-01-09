@@ -11,7 +11,7 @@ const router = express.Router();
 //Posts Routes
 // Public: view all posts or single post
 router.get("/posts", getPosts);
-router.get("/posts/:id", authenticate, getPost);
+router.get("/posts/:id", getPost);
 
 // Authenticated: create/update posts
 router.post("/posts", authenticate, createPost);
