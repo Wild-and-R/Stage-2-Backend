@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { prisma } from "../connection/client";
 import AppError from "../utils/app-error";
 
@@ -6,28 +6,23 @@ import AppError from "../utils/app-error";
 const calculateTotalStock = (stocks: { quantity: number }[]) =>
   stocks.reduce((sum, s) => sum + s.quantity, 0);
 
-// GET all products with filtering, sorting, pagination
-export const getProducts = async (req: Request, res: Response, next: any) => {
+// GET all products (hide supplier info)
+export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
       minPrice,
       maxPrice,
       minStock,
       maxStock,
-      sortBy = "price", // price | totalStock
-      order = "asc",    // asc | desc
+      sortBy = "price",
+      order = "asc",
       limit = "10",
       offset = "0",
     } = req.query;
 
-    // Fetch products with stocks
     const products = await prisma.product.findMany({
       include: {
-        stocks: {
-          include: {
-            supplier: true,
-          },
-        },
+        stocks: true, // only need quantity to calculate totalStock
       },
       where: {
         price: {
@@ -39,7 +34,6 @@ export const getProducts = async (req: Request, res: Response, next: any) => {
       skip: Number(offset),
     });
 
-    // Calculate total stock per product
     const filteredProducts = products
       .map((p) => ({
         ...p,
@@ -51,12 +45,10 @@ export const getProducts = async (req: Request, res: Response, next: any) => {
         return gte && lte;
       });
 
-    // Sorting
     filteredProducts.sort((a, b) => {
       if (sortBy === "totalStock") {
         return order === "asc" ? a.totalStock - b.totalStock : b.totalStock - a.totalStock;
       } else {
-        // default price sorting
         return order === "asc" ? a.price - b.price : b.price - a.price;
       }
     });
@@ -73,11 +65,6 @@ export const getProducts = async (req: Request, res: Response, next: any) => {
         description: p.description,
         price: p.price,
         totalStock: p.totalStock,
-        suppliers: p.stocks.map((s) => ({
-          supplierId: s.supplier.id,
-          supplierName: s.supplier.name,
-          suppliedQuantity: s.quantity,
-        })),
       })),
     });
   } catch (error) {
@@ -85,20 +72,14 @@ export const getProducts = async (req: Request, res: Response, next: any) => {
   }
 };
 
-// GET product by ID (with total stock and suppliers)
-export const getProduct = async (req: Request, res: Response, next: any) => {
+// GET single product (hide supplier info)
+export const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
 
     const product = await prisma.product.findUnique({
       where: { id },
-      include: {
-        stocks: {
-          include: {
-            supplier: true,
-          },
-        },
-      },
+      include: { stocks: true }, // just to calculate totalStock
     });
 
     if (!product) return next(new AppError("Product not found", 404));
@@ -113,11 +94,6 @@ export const getProduct = async (req: Request, res: Response, next: any) => {
         description: product.description,
         price: product.price,
         totalStock,
-        suppliers: product.stocks.map((s) => ({
-          supplierId: s.supplier.id,
-          supplierName: s.supplier.name,
-          suppliedQuantity: s.quantity,
-        })),
       },
     });
   } catch (error) {
@@ -125,29 +101,33 @@ export const getProduct = async (req: Request, res: Response, next: any) => {
   }
 };
 
-// CREATE product (stock added via ProductStock separately)
-export const createProduct = async (req: Request, res: Response, next: any) => {
+// UPDATE product (only supplier who owns the product)
+export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description, price } = req.body;
+    const currentUser = res.locals.currentUser;
 
-    const newProduct = await prisma.product.create({
-      data: { name, description, price },
-    });
+    if (!currentUser || currentUser.role !== "supplier") {
+      return next(new AppError("Unauthorized: Supplier only", 401));
+    }
 
-    res.status(201).json({
-      message: "Product created successfully",
-      data: newProduct,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// UPDATE product (stock updated via ProductStock separately)
-export const updateProduct = async (req: Request, res: Response, next: any) => {
-  try {
     const id = Number(req.params.id);
     const { name, description, price } = req.body;
+
+    // Find product and its stocks
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { stocks: true },
+    });
+
+    if (!product) return next(new AppError("Product not found", 404));
+
+    // Find supplier
+    const supplier = await prisma.supplier.findUnique({
+      where: { userId: currentUser.id },
+    });
+
+    const ownsProduct = product.stocks.some((s) => s.supplierId === supplier?.id);
+    if (!ownsProduct) return next(new AppError("You do not own this product", 403));
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -159,24 +139,46 @@ export const updateProduct = async (req: Request, res: Response, next: any) => {
       data: updatedProduct,
     });
   } catch (error) {
-    next(new AppError("Product not found", 404));
+    next(error);
   }
 };
 
-// DELETE product
-export const deleteProduct = async (req: Request, res: Response, next: any) => {
+// DELETE product (only supplier who owns the product)
+export const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const currentUser = res.locals.currentUser;
+
+    if (!currentUser || currentUser.role !== "supplier") {
+      return next(new AppError("Unauthorized: Supplier only", 401));
+    }
+
     const id = Number(req.params.id);
 
-    const deletedProduct = await prisma.product.delete({
+    // Find product and its stocks
+    const product = await prisma.product.findUnique({
       where: { id },
+      include: { stocks: true },
     });
+
+    if (!product) return next(new AppError("Product not found", 404));
+
+    // Check supplier ownership
+    const supplier = await prisma.supplier.findUnique({
+      where: { userId: currentUser.id },
+    });
+
+    const ownsProduct = product.stocks.some((s) => s.supplierId === supplier?.id);
+    if (!ownsProduct) return next(new AppError("You do not own this product", 403));
+
+    await prisma.$transaction([
+      prisma.productStock.deleteMany({ where: { productId: id } }),
+      prisma.product.delete({ where: { id } }),
+    ]);
 
     res.status(200).json({
       message: "Product deleted successfully",
-      data: deletedProduct,
     });
   } catch (error) {
-    next(new AppError("Product not found", 404));
+    next(error);
   }
 };

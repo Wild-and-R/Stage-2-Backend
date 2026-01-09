@@ -33,11 +33,11 @@ export const updateSupplierStock = async (
       }
     }
 
-    // 🔹 Collect unique product & supplier IDs
+    // Collect unique product & supplier IDs
     const productIds = [...new Set(stocks.map(s => s.productId))];
     const supplierIds = [...new Set(stocks.map(s => s.supplierId))];
 
-    // 🔹 Validate products exist
+    // Validate products exist
     const existingProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true },
@@ -47,7 +47,7 @@ export const updateSupplierStock = async (
       return next(new AppError("One or more productIds are invalid", 400));
     }
 
-    // 🔹 Validate suppliers exist
+    // Validate suppliers exist
     const existingSuppliers = await prisma.supplier.findMany({
       where: { id: { in: supplierIds } },
       select: { id: true },
@@ -57,7 +57,7 @@ export const updateSupplierStock = async (
       return next(new AppError("One or more supplierIds are invalid", 400));
     }
 
-    // 🔹 Transaction for stock update
+    // Transaction for stock update
     await prisma.$transaction(
       stocks.map(stock =>
         prisma.productStock.upsert({

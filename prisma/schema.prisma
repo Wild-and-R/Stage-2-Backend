@@ -8,11 +8,24 @@ datasource db {
 }
 
 model User {
-  id     Int     @id @default(autoincrement())
-  name   String
-  email  String  @unique
-  points Int     @default(0)
-  orders Order[]
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  points    Int       @default(0)
+  role      String    @default("user") // "user" | "supplier" | "admin"
+
+  orders    Order[]
+  supplier  Supplier? // optional, only if this user is a supplier
+}
+
+model Supplier {
+  id        Int             @id @default(autoincrement())
+  userId    Int             @unique
+  name      String
+  stocks    ProductStock[]
+
+  user      User            @relation(fields: [userId], references: [id])
 }
 
 model Product {
@@ -24,18 +37,11 @@ model Product {
   stocks      ProductStock[]
 }
 
-model Supplier {
-  id        Int            @id @default(autoincrement())
-  name      String
-  quantity  Int            // total stock supplier can add
-  stocks    ProductStock[]
-}
-
 model ProductStock {
   id         Int      @id @default(autoincrement())
   productId  Int
   supplierId Int
-  quantity   Int      // stock supplied for this specific product
+  quantity   Int
 
   product  Product  @relation(fields: [productId], references: [id])
   supplier Supplier @relation(fields: [supplierId], references: [id])
