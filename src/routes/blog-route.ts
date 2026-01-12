@@ -1,17 +1,18 @@
 import express from "express";
 import {getPosts, getPost, createPost, updatePost, deletePost} from "../controllers/post-controller";
-import {getUsers, getUser, updateUser, deleteUser} from "../controllers/user-controller";
+import {getUsers, getUser, updateUser, deleteUser, uploadProfilePicture} from "../controllers/user-controller";
 import {getPostComments, getCommentsSummary} from "../controllers/comment-controller";
 import { registerUser, loginUser } from "../controllers/auth";
 import { authenticate } from "../middlewares/auth";
 import { authorizeAdmin } from "../middlewares/authorize-admin";
+import { upload } from "../utils/multer";
 
 const router = express.Router();
 
 //Posts Routes
 // Public: view all posts or single post
 router.get("/posts", getPosts);
-router.get("/posts/:id", getPost);
+router.get("/posts/:id", authenticate, getPost);
 
 // Authenticated: create/update posts
 router.post("/posts", authenticate, createPost);
@@ -32,8 +33,11 @@ router.get("/comments", getCommentsSummary);
 router.get("/users", getUsers);
 router.get("/users/:id", getUser);
 
-// Admin-only: update or delete users
-router.put("/users/:id", authenticate, authorizeAdmin, updateUser);
+// Admin or user only: update users and upload profile picture
+router.post("/users/:id/profile-picture", authenticate, upload.single("image"), uploadProfilePicture);
+router.put("/users/:id", authenticate, updateUser);
+
+//Admin-only: delete users
 router.delete("/users/:id", authenticate, authorizeAdmin, deleteUser);
 
 // Auth Routes

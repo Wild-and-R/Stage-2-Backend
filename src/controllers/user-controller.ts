@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../connection/client";
 import AppError from "../utils/app-error";
+import path from "path";
 
 // GET all users
 export const getUsers = async (_req: Request, res: Response, next: NextFunction) => {
@@ -25,7 +26,7 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-// UPDATE user (Admin only)
+// UPDATE user (Same User or Admin only)
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
@@ -46,5 +47,42 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
     res.json({ message: "User deleted successfully", data: user });
   } catch (error) {
     next(new AppError("User not found", 404));
+  }
+};
+
+//upload profile picture
+export const uploadProfilePicture = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = Number(req.params.id);
+    const currentUser = res.locals.currentUser;
+
+    if (!req.file) {
+      return next(new AppError("No file uploaded", 400));
+    }
+
+    // restrict to same user or admin
+    if (currentUser.id !== userId && currentUser.role !== "ADMIN") {
+    return next(new AppError("Unauthorized", 403));
+    }
+
+    const imagePath = path.join("uploads", req.file.filename);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        profileImage: imagePath,
+      },
+    });
+
+    res.status(200).json({
+      message: "Profile picture uploaded successfully",
+      data: user,
+    });
+  } catch (error) {
+    next(new AppError("Error uploading profile picture", 500));
   }
 };
