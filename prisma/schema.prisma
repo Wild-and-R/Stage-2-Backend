@@ -33,6 +33,7 @@ model Product {
   name        String
   description String
   price       Float
+  productImage String?
   orders      Order[]
   stocks      ProductStock[]
 }

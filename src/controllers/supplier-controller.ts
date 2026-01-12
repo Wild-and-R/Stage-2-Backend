@@ -3,6 +3,7 @@ import { prisma } from "../connection/client";
 import AppError from "../utils/app-error";
 import { signToken } from "../utils/jwt";
 import bcrypt from "bcryptjs";
+import path from "path";
 
 export const supplierLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -163,3 +164,56 @@ export const addProduct = async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 };
+
+// POST /products/:id/upload-image
+export const uploadProductImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const currentUser = res.locals.currentUser;
+
+    if (!currentUser || currentUser.role !== "supplier") {
+      return next(new AppError("Unauthorized: Supplier only", 401));
+    }
+
+    const productId = Number(req.params.id);
+
+    const productStock = await prisma.productStock.findFirst({
+      where: {
+        productId,
+        supplier: {
+          userId: currentUser.id,
+        },
+      },
+      include: {
+        product: true,
+      },
+    });
+
+    if (!productStock) {
+      return next(
+        new AppError("Unauthorized: You do not supply this product", 403)
+      );
+    }
+
+    if (!req.file) {
+      return next(new AppError("No image file uploaded", 400));
+    }
+
+    const imagePath = path.join("uploads", req.file.filename);
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: { productImage: imagePath },
+    });
+
+    res.status(200).json({
+      message: "Product image uploaded successfully",
+      data: updatedProduct,
+    });
+  } catch (error) {
+    next(new AppError("Error uploading product image", 500));
+  }
+};
+
+
+
+

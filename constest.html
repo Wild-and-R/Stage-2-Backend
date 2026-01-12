@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Test CORS</h1>
+    <button onclick="fetchData()">Try</button>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('http://localhost:4000/api/v1/products', {
+                    method: 'GET'
+                });
+                const data = await response.json();
+                console.log(data);
+                alert("Success!");
+            } catch (error) {
+                console.error(error);
+                alert("Error!");
+            }
+        }
+    </script>
+</body>
+</html>
